@@ -14,7 +14,6 @@
 </head>
 <body>
 
-  <!-- ローディング画面 -->
   <div id="loading-screen">
     <div class="loader-inner">
       <div class="loader-logo">Siftra</div>
@@ -22,7 +21,6 @@
     </div>
   </div>
 
-  <!-- ヘッダー -->
   <header id="app-header">
     <div class="header-left">
       <span class="logo-mark">S</span>
@@ -36,7 +34,6 @@
     </div>
   </header>
 
-  <!-- メインコンテンツ -->
   <main id="app-main">
 
     <!-- ===== TAB: 受信ボックス ===== -->
@@ -46,11 +43,8 @@
         <p class="section-desc">タグ未設定のアイテム。タップして分類する。</p>
       </div>
 
-      <!-- URLシェア入力エリア -->
       <div class="share-input-card">
-        <div class="share-input-label">
-          <span class="mono">// URL・リンクを貼る</span>
-        </div>
+        <div class="share-input-label"><span class="mono">// URL・リンクを貼る</span></div>
         <div class="share-row">
           <input type="url" id="share-url-input" placeholder="https://..." autocomplete="off" />
           <button class="btn-accent" id="share-url-btn">受信</button>
@@ -67,30 +61,21 @@
         </div>
       </div>
 
-      <!-- 写真アップロードカード -->
       <div class="upload-card" id="upload-drop-zone">
         <div class="upload-icon">📷</div>
         <p class="upload-text">写真をアップロード</p>
         <p class="upload-sub">タップして選択 または ドラッグ＆ドロップ</p>
         <input type="file" id="file-input" multiple accept="image/*" style="display:none" />
-        <button class="btn-outline" onclick="document.getElementById('file-input').click()">
-          ファイルを選択
-        </button>
+        <button class="btn-outline" onclick="document.getElementById('file-input').click()">ファイルを選択</button>
       </div>
 
-      <!-- 未タグ付け一覧 -->
-      <div class="untagged-list" id="untagged-list">
-        <!-- JS生成 -->
-      </div>
+      <div class="untagged-list" id="untagged-list"></div>
     </section>
 
     <!-- ===== TAB: 検索 ===== -->
     <section class="tab-content" id="tab-search">
-      <div class="section-header">
-        <h2>アーカイブ検索</h2>
-      </div>
+      <div class="section-header"><h2>アーカイブ検索</h2></div>
 
-      <!-- フィルターパネル -->
       <div class="filter-panel">
         <div class="filter-row">
           <span class="filter-axis">カテゴリ</span>
@@ -101,12 +86,12 @@
           <div class="filter-chips" id="filter-usage"></div>
         </div>
         <div class="filter-row">
-          <span class="filter-axis">トーン</span>
-          <div class="filter-chips" id="filter-tone"></div>
+          <span class="filter-axis">エリア＆サイズ感</span>
+          <div class="filter-chips" id="filter-area"></div>
         </div>
         <div class="filter-row">
-          <span class="filter-axis">カラー</span>
-          <div class="filter-chips" id="filter-color"></div>
+          <span class="filter-axis">トンマナ</span>
+          <div class="filter-chips" id="filter-tone"></div>
         </div>
         <div class="filter-actions">
           <button class="btn-ghost" id="filter-reset">リセット</button>
@@ -114,7 +99,6 @@
         </div>
       </div>
 
-      <!-- 検索結果 -->
       <div class="results-header">
         <span class="mono" id="results-count">── 件</span>
         <div class="view-toggle">
@@ -122,20 +106,16 @@
           <button class="view-btn" data-view="list">☰</button>
         </div>
       </div>
-
-      <div class="results-grid" id="results-grid">
-        <!-- JS生成 -->
-      </div>
+      <div class="results-grid" id="results-grid"></div>
     </section>
 
     <!-- ===== TAB: プロンプト生成 ===== -->
     <section class="tab-content" id="tab-prompt">
       <div class="section-header">
         <h2>プロンプト生成</h2>
-        <p class="section-desc">選んだアイテムのタグからnano banana Pro用テキストを生成する。</p>
+        <p class="section-desc">画像を選択 → 特徴を自動認識 → nano banana Pro用テキストを生成</p>
       </div>
 
-      <!-- 選択済みアイテム -->
       <div class="selected-items-area">
         <div class="selected-header">
           <span class="mono">// 選択中</span>
@@ -147,12 +127,11 @@
         </div>
       </div>
 
-      <!-- 追加オプション -->
       <div class="prompt-options">
         <div class="prompt-option-row">
           <label class="mono">構図オプション</label>
           <div class="option-chips">
-            <button class="chip" data-option="angle" data-value="">指定なし</button>
+            <button class="chip active" data-option="angle" data-value="">指定なし</button>
             <button class="chip" data-option="angle" data-value="wide-angle">広角</button>
             <button class="chip" data-option="angle" data-value="close-up">クローズアップ</button>
             <button class="chip" data-option="angle" data-value="top-down">俯瞰</button>
@@ -161,25 +140,23 @@
         <div class="prompt-option-row">
           <label class="mono">照明オプション</label>
           <div class="option-chips">
-            <button class="chip" data-option="lighting" data-value="">指定なし</button>
+            <button class="chip active" data-option="lighting" data-value="">指定なし</button>
             <button class="chip" data-option="lighting" data-value="golden-hour">ゴールデンアワー</button>
             <button class="chip" data-option="lighting" data-value="neon-reflection">ネオン反射</button>
             <button class="chip" data-option="lighting" data-value="soft-ambient">柔らかい間接光</button>
           </div>
         </div>
         <div class="prompt-option-row">
-          <label class="mono">参考画像を加える</label>
-          <input type="url" id="ref-image-url" placeholder="参考画像URL（任意）" />
+          <label class="mono">参考画像URL（任意）</label>
+          <input type="url" id="ref-image-url" placeholder="https://..." />
         </div>
       </div>
 
-      <!-- 生成ボタン -->
       <button class="btn-generate" id="generate-btn">
         <span class="generate-icon">✦</span>
         プロンプトを生成
       </button>
 
-      <!-- 出力エリア -->
       <div class="prompt-output-area" id="prompt-output" style="display:none">
         <div class="prompt-output-header">
           <span class="mono">// nano banana Pro</span>
@@ -195,19 +172,15 @@
 
   </main>
 
-  <!-- ===== ボトムナビ ===== -->
   <nav id="bottom-nav">
     <button class="nav-item active" data-tab="inbox">
-      <span class="nav-icon">📥</span>
-      <span class="nav-label">受信</span>
+      <span class="nav-icon">📥</span><span class="nav-label">受信</span>
     </button>
     <button class="nav-item" data-tab="search">
-      <span class="nav-icon">🔍</span>
-      <span class="nav-label">検索</span>
+      <span class="nav-icon">🔍</span><span class="nav-label">検索</span>
     </button>
     <button class="nav-item" data-tab="prompt">
-      <span class="nav-icon">✦</span>
-      <span class="nav-label">生成</span>
+      <span class="nav-icon">✦</span><span class="nav-label">生成</span>
     </button>
   </nav>
 
@@ -225,7 +198,7 @@
       </div>
 
       <div class="modal-tags">
-        <!-- 必須タグ -->
+        <!-- 必須 -->
         <div class="tag-group required">
           <div class="tag-group-label">カテゴリ <span class="required-mark">必須</span></div>
           <div class="tag-chips" id="modal-category"></div>
@@ -234,31 +207,19 @@
           <div class="tag-group-label">用途 <span class="required-mark">必須</span></div>
           <div class="tag-chips" id="modal-usage"></div>
         </div>
-        <div class="tag-group required">
-          <div class="tag-group-label">トーン <span class="required-mark">必須</span></div>
-          <div class="tag-chips" id="modal-tone"></div>
-        </div>
-        <!-- 任意タグ -->
+        <!-- 任意・複数選択 -->
         <div class="tag-group">
-          <div class="tag-group-label">カラー</div>
-          <div class="tag-chips" id="modal-color"></div>
-        </div>
-        <div class="tag-group">
-          <div class="tag-group-label">エリア</div>
+          <div class="tag-group-label">エリア＆サイズ感</div>
           <div class="tag-chips" id="modal-area"></div>
         </div>
         <div class="tag-group">
-          <div class="tag-group-label">コスト感</div>
-          <div class="tag-chips" id="modal-cost"></div>
-        </div>
-        <div class="tag-group">
-          <div class="tag-group-label">施工特性</div>
-          <div class="tag-chips" id="modal-structure"></div>
+          <div class="tag-group-label">トンマナ</div>
+          <div class="tag-chips" id="modal-tone"></div>
         </div>
         <!-- メモ -->
         <div class="tag-group">
           <div class="tag-group-label">メモ（任意）</div>
-          <textarea id="modal-memo" placeholder="施工メモ・特記事項など" rows="2"></textarea>
+          <textarea id="modal-memo" placeholder="メモ・特記事項など" rows="2"></textarea>
         </div>
       </div>
 
@@ -287,9 +248,9 @@
           <input type="text" id="settings-username" placeholder="オオタユウキ" />
         </div>
         <div class="settings-group">
-          <label class="settings-label">クイックセット（よく使う組み合わせ）</label>
-          <div class="quickset-list" id="quickset-list"></div>
-          <button class="btn-ghost sm" id="save-quickset-btn">現在の選択を保存</button>
+          <label class="settings-label">Anthropic APIキー（画像認識用）</label>
+          <input type="password" id="settings-api-key" placeholder="sk-ant-..." />
+          <span class="settings-hint">プロンプト生成タブの画像認識に使用。未入力はタグベース生成になります。</span>
         </div>
       </div>
       <div class="modal-footer">
@@ -298,9 +259,7 @@
     </div>
   </div>
 
-  <!-- トースト通知 -->
   <div class="toast" id="toast"></div>
-
   <script src="app.js"></script>
 </body>
 </html>

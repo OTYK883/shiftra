@@ -655,6 +655,38 @@ html, body {
   margin-bottom: 8px;
   display: flex; align-items: center; gap: 6px;
 }
+.settings-hint {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-3);
+  line-height: 1.5;
+}
+.settings-group input[type="password"] {
+  background: var(--bg-3);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+.settings-group input[type="password"]:focus { border-color: var(--accent); }
+  color: var(--teal);
+  font-size: 0.55rem;
+  background: var(--teal-dim);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid rgba(44,213,196,0.3);
+  margin-left: 6px;
+}
+.chip.multi.active {
+  background: var(--teal-dim);
+  border-color: var(--teal);
+  color: var(--teal);
+}
 .required-mark {
   color: var(--accent);
   font-size: 0.55rem;
