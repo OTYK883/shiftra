@@ -27,7 +27,6 @@ async function init() {
   renderModalTagChips();
   await loadItems();
   renderStats();
-  bindEvents();
   setTimeout(hideLoading, 1400);
 }
 
