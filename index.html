@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Siftra</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ローディング画面 -->
+  <div id="loading-screen">
+    <div class="loader-inner">
+      <div class="loader-logo">Siftra</div>
+      <div class="loader-bar"><div class="loader-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- ヘッダー -->
+  <header id="app-header">
+    <div class="header-left">
+      <span class="logo-mark">S</span>
+      <span class="logo-text">Siftra</span>
+    </div>
+    <div class="header-center">
+      <span id="header-stats">── loading ──</span>
+    </div>
+    <div class="header-right">
+      <button class="icon-btn" id="settings-btn" title="設定">⚙</button>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main id="app-main">
+
+    <!-- ===== TAB: 受信ボックス ===== -->
+    <section class="tab-content active" id="tab-inbox">
+      <div class="section-header">
+        <h2>受信ボックス <span class="badge" id="inbox-count">0</span></h2>
+        <p class="section-desc">タグ未設定のアイテム。タップして分類する。</p>
+      </div>
+
+      <!-- URLシェア入力エリア -->
+      <div class="share-input-card">
+        <div class="share-input-label">
+          <span class="mono">// URL・リンクを貼る</span>
+        </div>
+        <div class="share-row">
+          <input type="url" id="share-url-input" placeholder="https://..." autocomplete="off" />
+          <button class="btn-accent" id="share-url-btn">受信</button>
+        </div>
+        <div class="share-source-row">
+          <span class="source-label">ソース：</span>
+          <div class="source-chips">
+            <button class="chip active" data-source="Instagram">Instagram</button>
+            <button class="chip" data-source="Pinterest">Pinterest</button>
+            <button class="chip" data-source="X">X</button>
+            <button class="chip" data-source="TikTok">TikTok</button>
+            <button class="chip" data-source="Web">Web</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 写真アップロードカード -->
+      <div class="upload-card" id="upload-drop-zone">
+        <div class="upload-icon">📷</div>
+        <p class="upload-text">写真をアップロード</p>
+        <p class="upload-sub">タップして選択 または ドラッグ＆ドロップ</p>
+        <input type="file" id="file-input" multiple accept="image/*" style="display:none" />
+        <button class="btn-outline" onclick="document.getElementById('file-input').click()">
+          ファイルを選択
+        </button>
+      </div>
+
+      <!-- 未タグ付け一覧 -->
+      <div class="untagged-list" id="untagged-list">
+        <!-- JS生成 -->
+      </div>
+    </section>
+
+    <!-- ===== TAB: 検索 ===== -->
+    <section class="tab-content" id="tab-search">
+      <div class="section-header">
+        <h2>アーカイブ検索</h2>
+      </div>
+
+      <!-- フィルターパネル -->
+      <div class="filter-panel">
+        <div class="filter-row">
+          <span class="filter-axis">カテゴリ</span>
+          <div class="filter-chips" id="filter-category"></div>
+        </div>
+        <div class="filter-row">
+          <span class="filter-axis">用途</span>
+          <div class="filter-chips" id="filter-usage"></div>
+        </div>
+        <div class="filter-row">
+          <span class="filter-axis">トーン</span>
+          <div class="filter-chips" id="filter-tone"></div>
+        </div>
+        <div class="filter-row">
+          <span class="filter-axis">カラー</span>
+          <div class="filter-chips" id="filter-color"></div>
+        </div>
+        <div class="filter-actions">
+          <button class="btn-ghost" id="filter-reset">リセット</button>
+          <button class="btn-accent" id="filter-apply">検索</button>
+        </div>
+      </div>
+
+      <!-- 検索結果 -->
+      <div class="results-header">
+        <span class="mono" id="results-count">── 件</span>
+        <div class="view-toggle">
+          <button class="view-btn active" data-view="grid">⊞</button>
+          <button class="view-btn" data-view="list">☰</button>
+        </div>
+      </div>
+
+      <div class="results-grid" id="results-grid">
+        <!-- JS生成 -->
+      </div>
+    </section>
+
+    <!-- ===== TAB: プロンプト生成 ===== -->
+    <section class="tab-content" id="tab-prompt">
+      <div class="section-header">
+        <h2>プロンプト生成</h2>
+        <p class="section-desc">選んだアイテムのタグからnano banana Pro用テキストを生成する。</p>
+      </div>
+
+      <!-- 選択済みアイテム -->
+      <div class="selected-items-area">
+        <div class="selected-header">
+          <span class="mono">// 選択中</span>
+          <span class="badge" id="selected-count">0</span>
+          <button class="btn-ghost sm" id="clear-selection">クリア</button>
+        </div>
+        <div class="selected-thumbs" id="selected-thumbs">
+          <div class="empty-state small">検索タブで写真を選択してください</div>
+        </div>
+      </div>
+
+      <!-- 追加オプション -->
+      <div class="prompt-options">
+        <div class="prompt-option-row">
+          <label class="mono">構図オプション</label>
+          <div class="option-chips">
+            <button class="chip" data-option="angle" data-value="">指定なし</button>
+            <button class="chip" data-option="angle" data-value="wide-angle">広角</button>
+            <button class="chip" data-option="angle" data-value="close-up">クローズアップ</button>
+            <button class="chip" data-option="angle" data-value="top-down">俯瞰</button>
+          </div>
+        </div>
+        <div class="prompt-option-row">
+          <label class="mono">照明オプション</label>
+          <div class="option-chips">
+            <button class="chip" data-option="lighting" data-value="">指定なし</button>
+            <button class="chip" data-option="lighting" data-value="golden-hour">ゴールデンアワー</button>
+            <button class="chip" data-option="lighting" data-value="neon-reflection">ネオン反射</button>
+            <button class="chip" data-option="lighting" data-value="soft-ambient">柔らかい間接光</button>
+          </div>
+        </div>
+        <div class="prompt-option-row">
+          <label class="mono">参考画像を加える</label>
+          <input type="url" id="ref-image-url" placeholder="参考画像URL（任意）" />
+        </div>
+      </div>
+
+      <!-- 生成ボタン -->
+      <button class="btn-generate" id="generate-btn">
+        <span class="generate-icon">✦</span>
+        プロンプトを生成
+      </button>
+
+      <!-- 出力エリア -->
+      <div class="prompt-output-area" id="prompt-output" style="display:none">
+        <div class="prompt-output-header">
+          <span class="mono">// nano banana Pro</span>
+          <button class="btn-copy" id="copy-prompt-btn">コピー</button>
+        </div>
+        <div class="prompt-output-text" id="prompt-output-text"></div>
+        <div class="prompt-actions">
+          <button class="btn-ghost" id="regenerate-btn">再生成</button>
+          <button class="btn-outline sm" id="save-prompt-btn">ログ保存</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== ボトムナビ ===== -->
+  <nav id="bottom-nav">
+    <button class="nav-item active" data-tab="inbox">
+      <span class="nav-icon">📥</span>
+      <span class="nav-label">受信</span>
+    </button>
+    <button class="nav-item" data-tab="search">
+      <span class="nav-icon">🔍</span>
+      <span class="nav-label">検索</span>
+    </button>
+    <button class="nav-item" data-tab="prompt">
+      <span class="nav-icon">✦</span>
+      <span class="nav-label">生成</span>
+    </button>
+  </nav>
+
+  <!-- ===== タグ付けモーダル ===== -->
+  <div class="modal-overlay" id="tag-modal" style="display:none">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3>タグを設定</h3>
+        <button class="modal-close" id="modal-close">✕</button>
+      </div>
+      <div class="modal-thumb-area">
+        <img id="modal-thumb" src="" alt="" />
+        <div class="modal-item-title" id="modal-item-title"></div>
+      </div>
+
+      <div class="modal-tags">
+        <!-- 必須タグ -->
+        <div class="tag-group required">
+          <div class="tag-group-label">カテゴリ <span class="required-mark">必須</span></div>
+          <div class="tag-chips" id="modal-category"></div>
+        </div>
+        <div class="tag-group required">
+          <div class="tag-group-label">用途 <span class="required-mark">必須</span></div>
+          <div class="tag-chips" id="modal-usage"></div>
+        </div>
+        <div class="tag-group required">
+          <div class="tag-group-label">トーン <span class="required-mark">必須</span></div>
+          <div class="tag-chips" id="modal-tone"></div>
+        </div>
+        <!-- 任意タグ -->
+        <div class="tag-group">
+          <div class="tag-group-label">カラー</div>
+          <div class="tag-chips" id="modal-color"></div>
+        </div>
+        <div class="tag-group">
+          <div class="tag-group-label">エリア</div>
+          <div class="tag-chips" id="modal-area"></div>
+        </div>
+        <div class="tag-group">
+          <div class="tag-group-label">コスト感</div>
+          <div class="tag-chips" id="modal-cost"></div>
+        </div>
+        <div class="tag-group">
+          <div class="tag-group-label">施工特性</div>
+          <div class="tag-chips" id="modal-structure"></div>
+        </div>
+        <!-- メモ -->
+        <div class="tag-group">
+          <div class="tag-group-label">メモ（任意）</div>
+          <textarea id="modal-memo" placeholder="施工メモ・特記事項など" rows="2"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-ghost" id="modal-skip">後で</button>
+        <button class="btn-accent" id="modal-save">保存する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 設定モーダル ===== -->
+  <div class="modal-overlay" id="settings-modal" style="display:none">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3>設定</h3>
+        <button class="modal-close" id="settings-close">✕</button>
+      </div>
+      <div class="settings-body">
+        <div class="settings-group">
+          <label class="settings-label">GAS エンドポイントURL</label>
+          <input type="url" id="settings-gas-url" placeholder="https://script.google.com/..." />
+        </div>
+        <div class="settings-group">
+          <label class="settings-label">ユーザー名</label>
+          <input type="text" id="settings-username" placeholder="オオタユウキ" />
+        </div>
+        <div class="settings-group">
+          <label class="settings-label">クイックセット（よく使う組み合わせ）</label>
+          <div class="quickset-list" id="quickset-list"></div>
+          <button class="btn-ghost sm" id="save-quickset-btn">現在の選択を保存</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-accent" id="settings-save">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- トースト通知 -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
