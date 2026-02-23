@@ -1,6 +1,6 @@
 // ============================================================
-// Siftra — app.js v4
-// クリップ（リンク）/ アーカイブ（画像）分離設計
+// Siftra — app.js v5
+// 削除・名称変更・一括タグ編集・テキスト検索・クリップサムネ改善
 // ============================================================
 
 var gasUrl   = localStorage.getItem('siftra_gas_url') || '';
@@ -9,7 +9,7 @@ var apiKey   = localStorage.getItem('siftra_api_key') || '';
 
 var allItems      = [];
 var allProjects   = [];
-var selectedItems = [];   // アーカイブのみ
+var selectedItems = [];     // プロンプト生成用（アーカイブのみ）
 var activeFilters = {};
 var activeProject = '';
 var activeContentType = 'archive'; // 'archive' | 'clip'
@@ -19,6 +19,17 @@ var promptOptions     = { angle: '', lighting: '' };
 var currentItemId     = null;
 var pendingItem       = null;
 var selectedProjectColor = '#e8a020';
+var searchQuery = '';
+
+// 一括編集
+var bulkEditMode    = false;
+var bulkSelectedIds = [];
+
+// 削除確認コールバック
+var deleteConfirmCallback = null;
+
+// リネーム対象
+var renameTargetId = null;
 
 var MULTI_SELECT_AXES = ['area', 'tone'];
 
@@ -47,6 +58,7 @@ window.addEventListener('DOMContentLoaded', function() {
 
   renderFilterChips();
   renderModalTagChips();
+  renderBulkModalChips();
   renderUntaggedList([]);
   renderResultsGrid([]);
 
@@ -60,11 +72,15 @@ window.addEventListener('DOMContentLoaded', function() {
   setupShareInput();
   setupFileUpload();
   setupFilters();
+  setupSearch();
   setupContentTypeTabs();
   setupInboxTypeTabs();
   setupTagModal();
   setupAnalyzeModal();
   setupProjectModal();
+  setupBulkEdit();
+  setupDeleteConfirm();
+  setupRenameModal();
   setupPrompt();
   setupViewToggle();
 });
@@ -114,6 +130,30 @@ function setupSettings() {
 }
 
 // ============================================================
+// テキスト検索
+// ============================================================
+function setupSearch() {
+  var input = document.getElementById('search-text-input');
+  var clearBtn = document.getElementById('search-clear-btn');
+  if (!input) return;
+
+  input.addEventListener('input', function() {
+    searchQuery = input.value.trim();
+    if (clearBtn) clearBtn.style.display = searchQuery ? 'flex' : 'none';
+    renderResultsGrid(filteredItems());
+    var rc = document.getElementById('results-count');
+    if (rc) rc.textContent = filteredItems().length + ' 件';
+  });
+
+  if (clearBtn) clearBtn.addEventListener('click', function() {
+    input.value = '';
+    searchQuery = '';
+    clearBtn.style.display = 'none';
+    renderResultsGrid(filteredItems());
+  });
+}
+
+// ============================================================
 // コンテンツタイプタブ（検索）
 // ============================================================
 function setupContentTypeTabs() {
@@ -122,17 +162,28 @@ function setupContentTypeTabs() {
       document.querySelectorAll('.content-type-tab').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
       activeContentType = btn.getAttribute('data-content-type');
+      // 一括モードを解除
+      if (bulkEditMode) exitBulkMode();
       renderResultsGrid(filteredItems());
     });
   });
 }
 
 function filteredItems() {
-  return allItems.filter(function(item) {
+  var items = allItems.filter(function(item) {
     if (activeContentType === 'archive') return !isClip(item);
     if (activeContentType === 'clip')    return isClip(item);
     return true;
   });
+  // テキスト検索
+  if (searchQuery) {
+    var q = searchQuery.toLowerCase();
+    items = items.filter(function(i) {
+      return ['file_name','ai_summary','memo','origin_url','source','category','usage','area','tone','project_id']
+        .some(function(k) { return i[k] && String(i[k]).toLowerCase().includes(q); });
+    });
+  }
+  return items;
 }
 
 // ============================================================
@@ -189,7 +240,6 @@ async function doShareUrl() {
 
     document.getElementById('share-url-input').value = '';
 
-    // AI分析
     var aiResult = { category: '', usage: '', area: '', tone: '', summary: ogpDesc };
     if (apiKey) {
       try {
@@ -197,7 +247,6 @@ async function doShareUrl() {
       } catch(e) { console.error('AI分析失敗:', e); }
     }
 
-    // タイトルフォールバック
     var displayTitle = ogpTitle || aiResult.summary || url.substring(0, 60);
 
     pendingItem = {
@@ -317,31 +366,26 @@ function setupAnalyzeModal() {
 }
 
 function openAnalyzeModal(item) {
-  // 種別バッジ
   var typeRow = document.getElementById('analyze-type-row');
   if (typeRow) {
     var isC = item.file_type === 'link';
     typeRow.innerHTML = '<span class="type-badge ' + (isC ? 'clip' : 'archive') + '">' + (isC ? '📎 クリップ（参考情報・リンク）' : '🖼 アーカイブ（画像・ファイル）') + '</span>';
   }
 
-  // サムネ
   var thumb = document.getElementById('analyze-thumb');
   if (thumb) { thumb.src = item.thumb || ''; thumb.style.display = item.thumb ? 'block' : 'none'; }
 
   document.getElementById('analyze-title').textContent = item.title || '無題';
   document.getElementById('analyze-summary').textContent = item.summary || '';
 
-  // 元URLリンク
   var urlLink = document.getElementById('analyze-origin-url');
   if (urlLink) {
     if (item.origin_url) { urlLink.href = item.origin_url; urlLink.style.display = 'inline-block'; }
     else { urlLink.style.display = 'none'; }
   }
 
-  // チップリセット
   document.querySelectorAll('#analyze-modal .tag-chips .chip').forEach(function(b) { b.classList.remove('active'); });
 
-  // AI推定タグを事前選択
   if (item.ai_category) preSelectChip('analyze-category', item.ai_category);
   if (item.ai_usage)    preSelectChip('analyze-usage',    item.ai_usage);
   if (item.ai_area)  item.ai_area.split(',').forEach(function(v) { preSelectChip('analyze-area', v.trim()); });
@@ -403,6 +447,11 @@ function setupFilters() {
   var resetBtn = document.getElementById('filter-reset');
   if (resetBtn) resetBtn.addEventListener('click', function() {
     activeFilters = {}; activeProject = '';
+    searchQuery = '';
+    var inp = document.getElementById('search-text-input');
+    if (inp) inp.value = '';
+    var clearBtn = document.getElementById('search-clear-btn');
+    if (clearBtn) clearBtn.style.display = 'none';
     document.querySelectorAll('.filter-chips .chip').forEach(function(b) { b.classList.remove('active'); });
     renderProjectFilterBar();
     fetchItems({});
@@ -437,10 +486,18 @@ function renderProjectList() {
   if (!allProjects.length) { el.innerHTML = '<div class="empty-state">案件フォルダがありません</div>'; return; }
   el.innerHTML = allProjects.map(function(p) {
     var count = allItems.filter(function(i) { return i.project_id === p.id; }).length;
-    return '<div class="project-card" onclick="filterByProject(\'' + p.id + '\')">' +
-      '<div class="project-color-dot" style="background:' + esc(p.color || '#e8a020') + '"></div>' +
-      '<div class="project-info"><div class="project-name">' + esc(p.name) + '</div><div class="project-meta">' + formatDate(p.created_at) + ' · ' + esc(p.created_by) + '</div></div>' +
-      '<div class="project-count">' + count + ' 件</div></div>';
+    return '<div class="project-card">' +
+      '<div class="project-color-dot" style="background:' + esc(p.color || '#e8a020') + '" onclick="filterByProject(\'' + p.id + '\')"></div>' +
+      '<div class="project-info" onclick="filterByProject(\'' + p.id + '\')">' +
+        '<div class="project-name">' + esc(p.name) + '</div>' +
+        '<div class="project-meta">' + formatDate(p.created_at) + ' · ' + esc(p.created_by) + '</div>' +
+      '</div>' +
+      '<div class="project-count">' + count + ' 件</div>' +
+      '<div class="project-actions">' +
+        '<button class="project-action-btn" onclick="openRenameProject(\'' + p.id + '\',\'' + esc(p.name) + '\')" title="名称変更">✏</button>' +
+        '<button class="project-action-btn danger" onclick="openDeleteProject(\'' + p.id + '\',\'' + esc(p.name) + '\')" title="削除">🗑</button>' +
+      '</div>' +
+    '</div>';
   }).join('');
 }
 
@@ -457,7 +514,7 @@ function renderProjectFilterBar() {
 }
 
 function renderProjectChipsInModals() {
-  ['modal-project','analyze-project'].forEach(function(elId) {
+  ['modal-project','analyze-project','bulk-project'].forEach(function(elId) {
     var el = document.getElementById(elId);
     if (!el) return;
     el.innerHTML = '<button class="chip" data-axis="project" data-value="" onclick="selectModalTag(\'project\',\'\',this)">なし</button>' +
@@ -483,7 +540,10 @@ function filterByProject(projectId) {
 
 function setupProjectModal() {
   var newBtn = document.getElementById('new-project-btn');
-  if (newBtn) newBtn.addEventListener('click', function() { document.getElementById('project-name-input').value = ''; document.getElementById('project-modal').style.display = 'flex'; });
+  if (newBtn) newBtn.addEventListener('click', function() {
+    document.getElementById('project-name-input').value = '';
+    document.getElementById('project-modal').style.display = 'flex';
+  });
   ['project-modal-close','project-modal-cancel'].forEach(function(id) {
     var b = document.getElementById(id);
     if (b) b.addEventListener('click', function() { document.getElementById('project-modal').style.display = 'none'; });
@@ -503,9 +563,224 @@ function setupProjectModal() {
     showToast('作成中...');
     apiPost({ action: 'createProject', name: name, created_by: username, color: selectedProjectColor })
       .then(function(result) {
-        if (result && result.success) { document.getElementById('project-modal').style.display = 'none'; showToast('案件フォルダを作成しました ✓'); fetchProjects(); }
-        else { showToast('作成に失敗しました'); }
+        if (result && result.success) {
+          document.getElementById('project-modal').style.display = 'none';
+          showToast('案件フォルダを作成しました ✓');
+          fetchProjects();
+        } else { showToast('作成に失敗しました'); }
       });
+  });
+}
+
+// ============================================================
+// プロジェクト名称変更
+// ============================================================
+function setupRenameModal() {
+  var closeBtn = document.getElementById('rename-modal-close');
+  if (closeBtn) closeBtn.addEventListener('click', function() { document.getElementById('rename-modal').style.display = 'none'; renameTargetId = null; });
+  var cancelBtn = document.getElementById('rename-cancel');
+  if (cancelBtn) cancelBtn.addEventListener('click', function() { document.getElementById('rename-modal').style.display = 'none'; renameTargetId = null; });
+  var saveBtn = document.getElementById('rename-save');
+  if (saveBtn) saveBtn.addEventListener('click', function() {
+    var name = document.getElementById('rename-input').value.trim();
+    if (!name) { showToast('案件名を入力してください'); return; }
+    if (!renameTargetId) return;
+    apiPost({ action: 'renameProject', id: renameTargetId, name: name }).then(function(result) {
+      if (result && result.success) {
+        document.getElementById('rename-modal').style.display = 'none';
+        showToast('名称を変更しました ✓');
+        renameTargetId = null;
+        fetchProjects();
+      } else { showToast('変更に失敗しました'); }
+    });
+  });
+}
+
+function openRenameProject(id, currentName) {
+  renameTargetId = id;
+  document.getElementById('rename-input').value = currentName;
+  document.getElementById('rename-modal').style.display = 'flex';
+}
+
+// ============================================================
+// 削除確認
+// ============================================================
+function setupDeleteConfirm() {
+  var cancelBtn = document.getElementById('delete-cancel-btn');
+  if (cancelBtn) cancelBtn.addEventListener('click', function() {
+    document.getElementById('delete-confirm-modal').style.display = 'none';
+    deleteConfirmCallback = null;
+  });
+  var confirmBtn = document.getElementById('delete-confirm-btn');
+  if (confirmBtn) confirmBtn.addEventListener('click', function() {
+    document.getElementById('delete-confirm-modal').style.display = 'none';
+    if (deleteConfirmCallback) { deleteConfirmCallback(); deleteConfirmCallback = null; }
+  });
+}
+
+function openDeleteConfirm(title, desc, callback) {
+  document.getElementById('delete-confirm-title').textContent = title || '削除しますか？';
+  document.getElementById('delete-confirm-desc').textContent = desc || 'この操作は取り消せません';
+  deleteConfirmCallback = callback;
+  document.getElementById('delete-confirm-modal').style.display = 'flex';
+}
+
+// アイテム削除
+function openDeleteItem(id) {
+  var item = allItems.find(function(i) { return i.id === id; });
+  var name = item ? (item.file_name || item.ai_summary || '無題') : 'このアイテム';
+  openDeleteConfirm('「' + name + '」を削除', 'スプレッドシートから削除されます', function() {
+    doDeleteItem(id);
+  });
+}
+
+function doDeleteItem(id) {
+  if (!gasUrl) { showToast('GASを接続してください'); return; }
+  apiPost({ action: 'deleteItem', id: id }).then(function(result) {
+    if (result && result.success) {
+      allItems = allItems.filter(function(i) { return i.id !== id; });
+      selectedItems = selectedItems.filter(function(i) { return i.id !== id; });
+      bulkSelectedIds = bulkSelectedIds.filter(function(bid) { return bid !== id; });
+      showToast('削除しました');
+      document.getElementById('tag-modal').style.display = 'none';
+      renderUntaggedList(allItems.filter(function(i) { return !i.category; }));
+      renderResultsGrid(filteredItems());
+      renderProjectList();
+      updateCounts();
+    } else { showToast('削除に失敗しました'); }
+  });
+}
+
+// プロジェクト削除
+function openDeleteProject(id, name) {
+  openDeleteConfirm('「' + name + '」を削除', 'フォルダ内アイテムのproject_idはリセットされます', function() {
+    doDeleteProject(id);
+  });
+}
+
+function doDeleteProject(id) {
+  if (!gasUrl) { showToast('GASを接続してください'); return; }
+  apiPost({ action: 'deleteProject', id: id }).then(function(result) {
+    if (result && result.success) {
+      showToast('プロジェクトを削除しました');
+      fetchProjects();
+      fetchItems({});
+    } else { showToast('削除に失敗しました'); }
+  });
+}
+
+// ============================================================
+// 一括タグ編集
+// ============================================================
+function setupBulkEdit() {
+  var toggleBtn = document.getElementById('bulk-toggle-btn');
+  if (toggleBtn) toggleBtn.addEventListener('click', function() {
+    if (bulkEditMode) exitBulkMode();
+    else enterBulkMode();
+  });
+
+  var cancelBtn = document.getElementById('bulk-cancel-btn');
+  if (cancelBtn) cancelBtn.addEventListener('click', exitBulkMode);
+
+  var tagBtn = document.getElementById('bulk-tag-btn');
+  if (tagBtn) tagBtn.addEventListener('click', openBulkModal);
+
+  var closeBtn = document.getElementById('bulk-modal-close');
+  if (closeBtn) closeBtn.addEventListener('click', function() { document.getElementById('bulk-modal').style.display = 'none'; });
+
+  var cancelModal = document.getElementById('bulk-modal-cancel');
+  if (cancelModal) cancelModal.addEventListener('click', function() { document.getElementById('bulk-modal').style.display = 'none'; });
+
+  var saveModal = document.getElementById('bulk-modal-save');
+  if (saveModal) saveModal.addEventListener('click', saveBulkTags);
+}
+
+function renderBulkModalChips() {
+  ['category','usage','area','tone'].forEach(function(axis) {
+    var el = document.getElementById('bulk-' + axis);
+    if (!el) return;
+    var isMulti = MULTI_SELECT_AXES.indexOf(axis) >= 0;
+    el.innerHTML = (tags[axis] || []).map(function(tag) {
+      return '<button class="chip ' + (isMulti ? 'multi' : '') + '" data-axis="' + axis + '" data-value="' + tag + '" onclick="selectModalTag(\'' + axis + '\',\'' + tag + '\',this)">' + esc(tag) + '</button>';
+    }).join('');
+  });
+}
+
+function enterBulkMode() {
+  bulkEditMode = true;
+  bulkSelectedIds = [];
+  var toggleBtn = document.getElementById('bulk-toggle-btn');
+  if (toggleBtn) toggleBtn.classList.add('active');
+  var bar = document.getElementById('bulk-action-bar');
+  if (bar) bar.style.display = 'flex';
+  updateBulkCount();
+  renderResultsGrid(filteredItems());
+}
+
+function exitBulkMode() {
+  bulkEditMode = false;
+  bulkSelectedIds = [];
+  var toggleBtn = document.getElementById('bulk-toggle-btn');
+  if (toggleBtn) toggleBtn.classList.remove('active');
+  var bar = document.getElementById('bulk-action-bar');
+  if (bar) bar.style.display = 'none';
+  renderResultsGrid(filteredItems());
+}
+
+function toggleBulkSelect(id) {
+  var idx = bulkSelectedIds.indexOf(id);
+  if (idx >= 0) bulkSelectedIds.splice(idx, 1);
+  else bulkSelectedIds.push(id);
+  updateBulkCount();
+  renderResultsGrid(filteredItems());
+}
+
+function updateBulkCount() {
+  var el = document.getElementById('bulk-action-count');
+  if (el) el.textContent = bulkSelectedIds.length + '件選択中';
+  var tagBtn = document.getElementById('bulk-tag-btn');
+  if (tagBtn) tagBtn.disabled = bulkSelectedIds.length === 0;
+}
+
+function openBulkModal() {
+  if (!bulkSelectedIds.length) { showToast('アイテムを選択してください'); return; }
+  // チップリセット
+  document.querySelectorAll('#bulk-modal .chip').forEach(function(b) { b.classList.remove('active'); });
+  renderProjectChipsInModals();
+  var cnt = document.getElementById('bulk-modal-count');
+  if (cnt) cnt.textContent = bulkSelectedIds.length;
+  document.getElementById('bulk-modal').style.display = 'flex';
+}
+
+function saveBulkTags() {
+  if (!bulkSelectedIds.length) return;
+  if (!gasUrl) { showToast('GASを接続してください'); return; }
+
+  var data = {};
+  ['category','usage','area','tone'].forEach(function(axis) {
+    var el = document.getElementById('bulk-' + axis);
+    if (!el) return;
+    var selected = Array.from(el.querySelectorAll('.chip.active')).map(function(b) { return b.getAttribute('data-value'); });
+    if (selected.length) data[axis] = selected.join(',');
+  });
+  var projEl = document.getElementById('bulk-project');
+  if (projEl) { var ps = projEl.querySelector('.chip.active'); if (ps && ps.getAttribute('data-value')) data.project_id = ps.getAttribute('data-value'); }
+
+  if (!Object.keys(data).length) { showToast('タグを1つ以上選択してください'); return; }
+
+  var total = bulkSelectedIds.length;
+  var done  = 0;
+  showToast('適用中... 0/' + total);
+
+  Promise.all(bulkSelectedIds.map(function(id) {
+    return apiPost(Object.assign({ action: 'updateTags', id: id }, data)).then(function() {
+      done++;
+      if (done === total) showToast('一括タグ付け完了 ✓ ' + total + '件');
+    });
+  })).then(function() {
+    document.getElementById('bulk-modal').style.display = 'none';
+    exitBulkMode();
+    fetchItems(activeFilters);
   });
 }
 
@@ -566,7 +841,6 @@ function renderUntaggedList(items) {
   var el = document.getElementById('untagged-list');
   if (!el) return;
 
-  // 種別フィルター
   var filtered = items.filter(function(item) {
     if (activeInboxType === 'clip')    return isClip(item);
     if (activeInboxType === 'archive') return !isClip(item);
@@ -577,9 +851,18 @@ function renderUntaggedList(items) {
   el.innerHTML = filtered.map(function(item) {
     var src = item.thumb_url || item.ogp_thumb || '';
     var clip = isClip(item);
-    var thumbHtml = src
-      ? '<img class="untagged-thumb" src="' + esc(src) + '" alt="" loading="lazy" />'
-      : '<div class="untagged-thumb ' + (clip ? 'clip-thumb' : 'url-thumb') + '">' + (clip ? '📎' : fileTypeEmoji(item.file_type, item.source)) + '</div>';
+
+    var thumbHtml;
+    if (src) {
+      thumbHtml = '<img class="untagged-thumb" src="' + esc(src) + '" alt="" loading="lazy" />';
+    } else if (clip) {
+      thumbHtml = '<div class="untagged-thumb clip-fallback-thumb ' + getSourceClass(item.source) + '">' +
+        '<span class="clip-fb-emoji">' + sourceEmoji(item.source) + '</span>' +
+        '<span class="clip-fb-domain">' + getDomain(item.origin_url) + '</span>' +
+        '</div>';
+    } else {
+      thumbHtml = '<div class="untagged-thumb url-thumb">' + fileTypeEmoji(item.file_type, item.source) + '</div>';
+    }
 
     var displayTitle = item.file_name || item.ai_summary || (item.origin_url ? item.origin_url.substring(0, 50) : '無題');
     var summaryHtml  = (item.ai_summary && item.ai_summary !== displayTitle) ? '<div class="untagged-summary">' + esc(item.ai_summary) + '</div>' : '';
@@ -595,6 +878,7 @@ function renderUntaggedList(items) {
         summaryHtml + urlHtml +
         '<div class="untagged-meta">' + esc(item.source || '') + '　' + formatDate(item.created_at) + '</div>' +
       '</div>' +
+      '<button class="untagged-delete-btn" onclick="event.stopPropagation();openDeleteItem(\'' + item.id + '\')" title="削除">🗑</button>' +
     '</div>';
   }).join('');
 }
@@ -609,17 +893,45 @@ function renderResultsGrid(items) {
   el.innerHTML = items.map(function(item) {
     var clip  = isClip(item);
     var sel   = !clip && selectedItems.some(function(s) { return s.id === item.id; });
+    var bulkSel = bulkSelectedIds.indexOf(item.id) >= 0;
     var thumb = item.thumb_url || item.ogp_thumb || '';
     var project = allProjects.find(function(p) { return p.id === item.project_id; });
     var projDot = project ? '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + esc(project.color) + ';margin-right:3px;vertical-align:middle"></span>' : '';
     var tagList = [item.category, item.usage].filter(Boolean);
     var displayTitle = item.file_name || item.ai_summary || (item.origin_url ? item.origin_url.substring(0, 40) + '…' : '無題');
 
-    return '<div class="result-card ' + (sel ? 'selected' : '') + ' ' + (clip ? 'clip-card' : '') + '" onclick="' + (clip ? 'openTagModal(\'' + item.id + '\')' : 'toggleSelect(\'' + item.id + '\')') + '">' +
+    // サムネHTML（クリップのフォールバック含む）
+    var thumbHtml;
+    if (thumb) {
+      thumbHtml = '<img class="result-thumb" src="' + esc(thumb) + '" alt="" loading="lazy" />';
+    } else if (clip) {
+      thumbHtml = buildClipFallbackThumb(item);
+    } else {
+      thumbHtml = '<div class="result-no-thumb">' + fileTypeEmoji(item.file_type, item.source) + '</div>';
+    }
+
+    // クリックアクション決定
+    var clickAction;
+    if (bulkEditMode) {
+      clickAction = 'toggleBulkSelect(\'' + item.id + '\')';
+    } else if (clip) {
+      clickAction = 'openTagModal(\'' + item.id + '\')';
+    } else {
+      clickAction = 'toggleSelect(\'' + item.id + '\')';
+    }
+
+    // 選択状態クラス
+    var selectedClass = '';
+    if (bulkEditMode && bulkSel) selectedClass = 'bulk-selected';
+    else if (!clip && sel) selectedClass = 'selected';
+
+    return '<div class="result-card ' + selectedClass + ' ' + (clip ? 'clip-card' : '') + '" onclick="' + clickAction + '">' +
       '<div class="result-thumb-wrap">' +
-        (thumb ? '<img class="result-thumb" src="' + esc(thumb) + '" alt="" loading="lazy" />' : '<div class="result-no-thumb">' + (clip ? '📎' : fileTypeEmoji(item.file_type, item.source)) + '</div>') +
+        thumbHtml +
         '<div class="result-source-badge">' + esc(item.source || '自社') + '</div>' +
-        (!clip ? '<div class="result-check">✓</div>' : '') +
+        (bulkEditMode
+          ? '<div class="result-bulk-check">' + (bulkSel ? '✓' : '') + '</div>'
+          : (!clip ? '<div class="result-check">✓</div>' : '')) +
       '</div>' +
       '<div class="result-info">' +
         '<div class="result-title">' + esc(displayTitle) + '</div>' +
@@ -629,12 +941,40 @@ function renderResultsGrid(items) {
         '</div>' +
         (item.origin_url ? '<a class="result-url-link" href="' + esc(item.origin_url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">🔗 元リンク</a>' : '') +
       '</div>' +
+      '<button class="result-delete-btn" onclick="event.stopPropagation();openDeleteItem(\'' + item.id + '\')" title="削除">🗑</button>' +
     '</div>';
   }).join('');
   var rc = document.getElementById('results-count');
   if (rc) rc.textContent = items.length + ' 件';
 }
 
+// ============================================================
+// クリップサムネ フォールバック
+// ============================================================
+function buildClipFallbackThumb(item) {
+  var domain = getDomain(item.origin_url);
+  var emoji  = sourceEmoji(item.source);
+  var cls    = getSourceClass(item.source);
+  return '<div class="result-clip-fallback ' + cls + '">' +
+    '<span class="clip-fb-emoji-lg">' + emoji + '</span>' +
+    '<span class="clip-fb-domain">' + esc(domain) + '</span>' +
+  '</div>';
+}
+
+function getDomain(url) {
+  if (!url) return '';
+  try { return new URL(url).hostname.replace('www.', ''); }
+  catch(e) { return url.substring(0, 20); }
+}
+
+function getSourceClass(source) {
+  var map = { 'Instagram': 'src-instagram', 'Pinterest': 'src-pinterest', 'X': 'src-x', 'TikTok': 'src-tiktok', 'note': 'src-note', 'Web': 'src-web' };
+  return map[source] || 'src-default';
+}
+
+// ============================================================
+// フィルターチップ描画
+// ============================================================
 function renderFilterChips() {
   ['category','usage','area','tone'].forEach(function(axis) {
     var el = document.getElementById('filter-' + axis);
@@ -669,11 +1009,12 @@ function renderSelectedThumbs() {
 }
 
 // ============================================================
-// 選択（アーカイブのみ）
+// 選択（アーカイブのみ / プロンプト用）
 // ============================================================
 function toggleSelect(id) {
+  if (bulkEditMode) { toggleBulkSelect(id); return; }
   var item = allItems.find(function(i) { return i.id === id; });
-  if (!item || isClip(item)) return; // クリップは選択不可
+  if (!item || isClip(item)) return;
   var idx = selectedItems.findIndex(function(s) { return s.id === id; });
   if (idx >= 0) selectedItems.splice(idx, 1); else selectedItems.push(item);
   renderResultsGrid(filteredItems());
@@ -699,6 +1040,10 @@ function setupTagModal() {
   if (mSkip) mSkip.addEventListener('click', closeTagModal);
   var mSave = document.getElementById('modal-save');
   if (mSave) mSave.addEventListener('click', saveTagModal);
+  var mDelete = document.getElementById('modal-delete-btn');
+  if (mDelete) mDelete.addEventListener('click', function() {
+    if (currentItemId) openDeleteItem(currentItemId);
+  });
 }
 
 function openTagModal(id) {
