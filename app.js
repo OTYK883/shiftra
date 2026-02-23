@@ -83,6 +83,7 @@ window.addEventListener('DOMContentLoaded', function() {
   setupRenameModal();
   setupPrompt();
   setupViewToggle();
+  setupPWA();
 });
 
 // ============================================================
@@ -1262,4 +1263,97 @@ function fileTypeEmoji(fileType, source) {
 function axisLabel(axis) {
   var map = {category:'カテゴリ',usage:'用途',area:'エリア＆サイズ感',tone:'トンマナ',project:'プロジェクト'};
   return map[axis] || axis;
+}
+
+// ============================================================
+// PWA: Share Target受信 + インストール促進
+// ============================================================
+function setupPWA() {
+  // Service Workerからの共有URL受信
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', function(event) {
+      if (event.data && event.data.type === 'SHARE_TARGET') {
+        handleSharedContent(event.data);
+      }
+    });
+  }
+
+  // ページ直接遷移時のURLパラメータ受信（SW未経由）
+  var params = new URLSearchParams(window.location.search);
+  var sharedUrl = params.get('share') || params.get('url') || '';
+  if (sharedUrl) {
+    setTimeout(function() { handleSharedContent({ url: sharedUrl, title: params.get('title') || '', text: params.get('text') || '' }); }, 1000);
+    // URLパラメータをクリア（履歴に残さない）
+    window.history.replaceState({}, '', '/shiftra/');
+  }
+
+  // iOSホーム追加バナー（初回のみ）
+  var isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  var isInApp   = window.navigator.standalone;
+  var dismissed = localStorage.getItem('siftra_ios_banner_dismissed');
+  if (isIOS && !isInApp && !dismissed) {
+    setTimeout(showIOSInstallBanner, 3000);
+  }
+
+  // Android/Chrome: beforeinstallpromptを保持
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    window._installPrompt = e;
+  });
+}
+
+// 受信したURLを受信ボックスに流し込む
+function handleSharedContent(data) {
+  var url   = data.url   || '';
+  var title = data.title || '';
+
+  if (!url && data.text) url = extractUrlFromText(data.text);
+  if (!url) return;
+
+  // 受信タブに切替
+  document.querySelectorAll('.nav-item').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(s) { s.classList.remove('active'); });
+  var inboxNav = document.querySelector('[data-tab="inbox"]');
+  var inboxTab = document.getElementById('tab-inbox');
+  if (inboxNav) inboxNav.classList.add('active');
+  if (inboxTab) inboxTab.classList.add('active');
+
+  // URLを入力欄にセット → 自動実行
+  var input = document.getElementById('share-url-input');
+  if (input) {
+    input.value = url;
+    showToast('📎 共有URLを受信しました');
+    setTimeout(function() { doShareUrl(); }, 600);
+  }
+}
+
+function extractUrlFromText(text) {
+  if (!text) return '';
+  var m = text.match(/https?:\/\/[^\s]+/);
+  return m ? m[0] : '';
+}
+
+// iOSインストールバナー
+function showIOSInstallBanner() {
+  if (document.getElementById('ios-install-banner')) return;
+  var banner = document.createElement('div');
+  banner.id = 'ios-install-banner';
+  banner.className = 'ios-install-banner';
+  banner.innerHTML =
+    '<div class="ios-banner-inner">' +
+      '<span class="ios-banner-icon">Ⓢ</span>' +
+      '<div class="ios-banner-text">' +
+        '<strong>ホーム画面に追加</strong>' +
+        '<span>共有ボタン → 「ホーム画面に追加」でアプリとして使えます</span>' +
+      '</div>' +
+      '<button class="ios-banner-close" onclick="dismissIOSBanner()">✕</button>' +
+    '</div>' +
+    '<div class="ios-banner-arrow">▼</div>';
+  document.body.appendChild(banner);
+}
+
+function dismissIOSBanner() {
+  var b = document.getElementById('ios-install-banner');
+  if (b) { b.style.opacity = '0'; setTimeout(function() { b.remove(); }, 300); }
+  localStorage.setItem('siftra_ios_banner_dismissed', '1');
 }

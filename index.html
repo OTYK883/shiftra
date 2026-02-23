@@ -7,6 +7,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0d0f14" />
   <title>Siftra</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-title" content="Siftra" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -485,6 +491,18 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <!-- PWA: Service Worker登録 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/shiftra/sw.js', { scope: '/shiftra/' })
+          .then(function(reg) { console.log('SW registered:', reg.scope); })
+          .catch(function(err) { console.warn('SW failed:', err); });
+      });
+    }
+  </script>
+
   <script src="app.js"></script>
 </body>
 </html>
