@@ -257,48 +257,59 @@ async function doShareUrl() {
 
   try {
     // GASでOGP取得 + Sheetsに仮保存
-    var result = await apiPost({
-      action: 'saveItem',
-      url: url,
-      source: selectedSource,
-      registered_by: username,
-    });
+    var result = null;
+    try {
+      result = await apiPost({
+        action: 'saveItem',
+        url: url,
+        source: selectedSource,
+        registered_by: username,
+      });
+    } catch(e) { console.error('GAS saveItem失敗:', e); }
 
-    if (!result || !result.success) {
-      showToast('受信に失敗しました');
-      return;
-    }
+    // GASが失敗してもAI分析＋モーダル表示は続行
+    var savedId   = (result && result.id)       || ('tmp_' + Date.now());
+    var ogpTitle  = (result && result.ogpTitle)  || '';
+    var ogpThumb  = (result && result.ogpThumb)  || '';
+    var ogpDesc   = (result && result.ogpDesc)   || '';
 
     document.getElementById('share-url-input').value = '';
 
+    if (result && !result.success && !result.id) {
+      showToast('GAS保存失敗 — AI分析のみ実行します');
+    }
+
     // AI自動分析（APIキーあれば）
-    var aiResult = { category: '', usage: '', area: '', tone: '', summary: result.ogpDesc || '' };
+    var aiResult = { category: '', usage: '', area: '', tone: '', summary: ogpDesc };
     if (apiKey) {
       try {
         aiResult = await analyzeWithAI({
-          title: result.ogpTitle,
-          summary: result.ogpDesc,
+          title: ogpTitle,
+          summary: ogpDesc,
           url: url,
           source: selectedSource,
-          imageUrl: result.ogpThumb,
+          imageUrl: ogpThumb,
         });
       } catch(e) { console.error('AI分析失敗:', e); }
     }
 
     // 分析確認モーダルを表示
     pendingItem = {
-      id: result.id,
-      title: result.ogpTitle || url,
-      thumb: result.ogpThumb || '',
-      summary: aiResult.summary,
-      ai_category: aiResult.category,
-      ai_usage:    aiResult.usage,
-      ai_area:     aiResult.area,
-      ai_tone:     aiResult.tone,
+      id: savedId,
+      title: ogpTitle || url,
+      thumb: ogpThumb,
+      summary: aiResult.summary || ogpDesc,
+      ai_category: aiResult.category || '',
+      ai_usage:    aiResult.usage    || '',
+      ai_area:     aiResult.area     || '',
+      ai_tone:     aiResult.tone     || '',
       ai_tags:     [aiResult.category, aiResult.usage].filter(Boolean).join(','),
     };
     openAnalyzeModal(pendingItem);
 
+  } catch(e) {
+    console.error('doShareUrl全体エラー:', e);
+    showToast('エラーが発生しました: ' + e.message);
   } finally {
     if (shareBtn) { shareBtn.disabled = false; shareBtn.textContent = '受信'; }
   }
