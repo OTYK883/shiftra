@@ -102,6 +102,13 @@
         </button>
       </div>
 
+      <!-- テキスト検索 -->
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-text-input" placeholder="タイトル・タグ・メモで検索..." autocomplete="off" />
+        <button class="search-clear-btn" id="search-clear-btn" style="display:none">✕</button>
+      </div>
+
       <!-- プロジェクトフィルター -->
       <div class="project-filter-bar" id="project-filter-bar">
         <button class="project-chip active" data-project="">すべて</button>
@@ -132,9 +139,12 @@
 
       <div class="results-header">
         <span class="mono" id="results-count">── 件</span>
-        <div class="view-toggle">
-          <button class="view-btn active" data-view="grid">⊞</button>
-          <button class="view-btn" data-view="list">☰</button>
+        <div class="results-header-right">
+          <button class="btn-bulk-toggle" id="bulk-toggle-btn" title="一括編集">一括</button>
+          <div class="view-toggle">
+            <button class="view-btn active" data-view="grid">⊞</button>
+            <button class="view-btn" data-view="list">☰</button>
+          </div>
         </div>
       </div>
       <div class="results-grid" id="results-grid"></div>
@@ -198,7 +208,7 @@
       </div>
 
       <button class="btn-generate" id="generate-btn">
-        <span class="generate-icon">✦</span>プロンプトを生成
+        <span class="generate-icon">✦</span> プロンプトを生成
       </button>
 
       <div class="prompt-output-area" id="prompt-output" style="display:none">
@@ -231,6 +241,13 @@
     </button>
   </nav>
 
+  <!-- ===== 一括編集フローティングバー ===== -->
+  <div class="bulk-action-bar" id="bulk-action-bar" style="display:none">
+    <span class="bulk-action-count" id="bulk-action-count">0件選択中</span>
+    <button class="btn-ghost sm" id="bulk-cancel-btn">キャンセル</button>
+    <button class="btn-accent" id="bulk-tag-btn">まとめてタグ付け</button>
+  </div>
+
   <!-- ===== AI分析確認モーダル ===== -->
   <div class="modal-overlay" id="analyze-modal" style="display:none">
     <div class="modal-sheet">
@@ -240,7 +257,6 @@
         <button class="modal-close" id="analyze-close">✕</button>
       </div>
 
-      <!-- 種別バッジ -->
       <div class="analyze-type-row" id="analyze-type-row"></div>
 
       <div class="analyze-preview">
@@ -326,8 +342,49 @@
         </div>
       </div>
       <div class="modal-footer">
+        <button class="btn-danger-ghost" id="modal-delete-btn">削除</button>
         <button class="btn-ghost" id="modal-skip">後で</button>
         <button class="btn-accent" id="modal-save">保存する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 一括タグ編集モーダル ===== -->
+  <div class="modal-overlay" id="bulk-modal" style="display:none">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3>まとめてタグ付け <span class="badge" id="bulk-modal-count">0</span></h3>
+        <button class="modal-close" id="bulk-modal-close">✕</button>
+      </div>
+      <div class="bulk-modal-note">
+        <span class="mono">選択したアイテム全てに同じタグを適用します。空欄の軸は変更しません。</span>
+      </div>
+      <div class="modal-tags">
+        <div class="tag-group">
+          <div class="tag-group-label">カテゴリ</div>
+          <div class="tag-chips" id="bulk-category"></div>
+        </div>
+        <div class="tag-group">
+          <div class="tag-group-label">用途</div>
+          <div class="tag-chips" id="bulk-usage"></div>
+        </div>
+        <div class="tag-group">
+          <div class="tag-group-label">格納先プロジェクト</div>
+          <div class="tag-chips" id="bulk-project"></div>
+        </div>
+        <div class="tag-group">
+          <div class="tag-group-label">エリア＆サイズ感</div>
+          <div class="tag-chips" id="bulk-area"></div>
+        </div>
+        <div class="tag-group">
+          <div class="tag-group-label">トンマナ</div>
+          <div class="tag-chips" id="bulk-tone"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" id="bulk-modal-cancel">キャンセル</button>
+        <button class="btn-accent" id="bulk-modal-save">適用する</button>
       </div>
     </div>
   </div>
@@ -360,6 +417,40 @@
       <div class="modal-footer">
         <button class="btn-ghost" id="project-modal-cancel">キャンセル</button>
         <button class="btn-accent" id="project-modal-save">作成する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== プロジェクト名称変更モーダル ===== -->
+  <div class="modal-overlay" id="rename-modal" style="display:none">
+    <div class="modal-sheet modal-sheet-sm">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3>案件名を変更</h3>
+        <button class="modal-close" id="rename-modal-close">✕</button>
+      </div>
+      <div class="settings-body">
+        <div class="settings-group">
+          <label class="settings-label">新しい案件名</label>
+          <input type="text" id="rename-input" placeholder="案件名" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" id="rename-cancel">キャンセル</button>
+        <button class="btn-accent" id="rename-save">変更する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 削除確認モーダル ===== -->
+  <div class="modal-overlay" id="delete-confirm-modal" style="display:none">
+    <div class="confirm-sheet">
+      <div class="confirm-icon">🗑</div>
+      <div class="confirm-title" id="delete-confirm-title">削除しますか？</div>
+      <div class="confirm-desc" id="delete-confirm-desc">この操作は取り消せません</div>
+      <div class="confirm-actions">
+        <button class="btn-ghost" id="delete-cancel-btn">キャンセル</button>
+        <button class="btn-danger" id="delete-confirm-btn">削除する</button>
       </div>
     </div>
   </div>
