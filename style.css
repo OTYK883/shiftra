@@ -992,3 +992,139 @@ html, body {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 10px;
 }
+
+/* ============================================================
+   URL LINKS IN CARDS
+   ============================================================ */
+.untagged-url-link,
+.result-url-link {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--teal);
+  text-decoration: none;
+  margin-top: 4px;
+  padding: 2px 6px;
+  border: 1px solid rgba(44,213,196,0.3);
+  border-radius: 4px;
+  background: var(--teal-dim);
+  transition: all 0.15s;
+}
+.untagged-url-link:hover,
+.result-url-link:hover {
+  background: rgba(44,213,196,0.2);
+  border-color: var(--teal);
+}
+
+/* ============================================================
+   CLIP / ARCHIVE SEPARATION
+   ============================================================ */
+.content-type-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+}
+.content-type-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--text-3);
+  font-family: var(--font-main);
+  font-size: 0.78rem;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.content-type-tab.active {
+  background: var(--bg-3);
+  color: var(--text);
+  border: 1px solid var(--border-2);
+}
+.content-count {
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  padding: 1px 6px;
+  color: var(--text-3);
+}
+
+/* クリップカードのスタイル差別化 */
+.result-card.clip-card {
+  border-left: 2px solid var(--teal);
+}
+.result-card.clip-card .result-no-thumb {
+  background: var(--teal-dim);
+}
+
+/* 受信ボックスの種別トグル */
+.inbox-type-toggle {
+  display: flex;
+  gap: 4px;
+}
+.inbox-type-btn {
+  background: none;
+  border: 1px solid var(--border-2);
+  border-radius: 14px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.inbox-type-btn.active {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 種別バッジ */
+.analyze-type-row {
+  padding: 6px 20px 0;
+}
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+.type-badge.clip {
+  background: var(--teal-dim);
+  border: 1px solid rgba(44,213,196,0.3);
+  color: var(--teal);
+}
+.type-badge.archive {
+  background: var(--accent-glow);
+  border: 1px solid rgba(232,160,32,0.3);
+  color: var(--accent);
+}
+
+/* 元URLリンク（モーダル内） */
+.analyze-url-link {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--teal);
+  text-decoration: none;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border: 1px solid rgba(44,213,196,0.3);
+  border-radius: 4px;
+  background: var(--teal-dim);
+}
+.analyze-url-link:hover { background: rgba(44,213,196,0.2); }

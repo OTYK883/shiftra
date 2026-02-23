@@ -40,11 +40,14 @@
     <section class="tab-content active" id="tab-inbox">
       <div class="section-header">
         <h2>受信ボックス <span class="badge" id="inbox-count">0</span></h2>
-        <p class="section-desc">受信後、AIが自動分析します。確認して1タップで確定。</p>
+        <p class="section-desc">URLは📎クリップ、ファイルは🖼アーカイブに自動振り分けします。</p>
       </div>
 
+      <!-- URL受信 → クリップ -->
       <div class="share-input-card">
-        <div class="share-input-label"><span class="mono">// URL・リンクを貼る</span></div>
+        <div class="share-input-label">
+          <span class="mono">// 📎 クリップ受信（SNS・Web URLを貼る）</span>
+        </div>
         <div class="share-row">
           <input type="url" id="share-url-input" placeholder="https://..." autocomplete="off" />
           <button class="btn-accent" id="share-url-btn">受信</button>
@@ -56,23 +59,29 @@
             <button class="chip" data-source="Pinterest">Pinterest</button>
             <button class="chip" data-source="X">X</button>
             <button class="chip" data-source="TikTok">TikTok</button>
+            <button class="chip" data-source="note">note</button>
             <button class="chip" data-source="Web">Web</button>
           </div>
         </div>
       </div>
 
+      <!-- ファイルアップロード → アーカイブ -->
       <div class="upload-card" id="upload-drop-zone">
-        <div class="upload-icon">📷</div>
-        <p class="upload-text">ファイルをアップロード</p>
+        <div class="upload-icon">🖼</div>
+        <p class="upload-text">アーカイブ受信（ファイルをアップロード）</p>
         <p class="upload-sub">画像・PDF・動画など / ドラッグ＆ドロップ可</p>
         <input type="file" id="file-input" multiple accept="image/*,application/pdf,video/*" style="display:none" />
         <button class="btn-outline" onclick="document.getElementById('file-input').click()">ファイルを選択</button>
       </div>
 
-      <!-- 未タグ一覧 -->
+      <!-- 未確定リスト -->
       <div class="inbox-list-header">
         <span class="mono">// 未確定アイテム</span>
-        <button class="btn-ghost sm" id="bulk-tag-btn">まとめてタグ付け</button>
+        <div class="inbox-type-toggle">
+          <button class="inbox-type-btn active" data-type="all">すべて</button>
+          <button class="inbox-type-btn" data-type="clip">📎 クリップ</button>
+          <button class="inbox-type-btn" data-type="archive">🖼 アーカイブ</button>
+        </div>
       </div>
       <div class="untagged-list" id="untagged-list"></div>
     </section>
@@ -81,10 +90,21 @@
     <section class="tab-content" id="tab-search">
       <div class="section-header"><h2>アーカイブ検索</h2></div>
 
+      <!-- クリップ / アーカイブ 切り替え -->
+      <div class="content-type-tabs">
+        <button class="content-type-tab active" data-content-type="archive">
+          🖼 アーカイブ
+          <span class="content-count" id="archive-count">0</span>
+        </button>
+        <button class="content-type-tab" data-content-type="clip">
+          📎 クリップ
+          <span class="content-count" id="clip-count">0</span>
+        </button>
+      </div>
+
       <!-- プロジェクトフィルター -->
       <div class="project-filter-bar" id="project-filter-bar">
         <button class="project-chip active" data-project="">すべて</button>
-        <!-- JS生成 -->
       </div>
 
       <div class="filter-panel">
@@ -120,17 +140,15 @@
       <div class="results-grid" id="results-grid"></div>
     </section>
 
-    <!-- ===== TAB: プロジェクト ===== -->
+    <!-- ===== TAB: 案件 ===== -->
     <section class="tab-content" id="tab-projects">
       <div class="section-header">
         <h2>プロジェクト</h2>
         <p class="section-desc">案件フォルダ。Driveと自動同期。</p>
       </div>
-
       <button class="btn-new-project" id="new-project-btn">
         <span>＋</span> 新しい案件フォルダを作成
       </button>
-
       <div class="project-list" id="project-list">
         <div class="empty-state">案件フォルダがありません</div>
       </div>
@@ -140,17 +158,17 @@
     <section class="tab-content" id="tab-prompt">
       <div class="section-header">
         <h2>プロンプト生成</h2>
-        <p class="section-desc">画像を選択 → 特徴を自動認識 → nano banana Pro用テキストを生成</p>
+        <p class="section-desc">🖼アーカイブから選択 → 画像認識 → nano banana Pro用テキストを生成</p>
       </div>
 
       <div class="selected-items-area">
         <div class="selected-header">
-          <span class="mono">// 選択中</span>
+          <span class="mono">// 選択中（アーカイブのみ）</span>
           <span class="badge" id="selected-count">0</span>
           <button class="btn-ghost sm" id="clear-selection">クリア</button>
         </div>
         <div class="selected-thumbs" id="selected-thumbs">
-          <div class="empty-state small">検索タブで写真を選択してください</div>
+          <div class="empty-state small">検索タブ（アーカイブ）で写真を選択してください</div>
         </div>
       </div>
 
@@ -222,11 +240,15 @@
         <button class="modal-close" id="analyze-close">✕</button>
       </div>
 
+      <!-- 種別バッジ -->
+      <div class="analyze-type-row" id="analyze-type-row"></div>
+
       <div class="analyze-preview">
         <img id="analyze-thumb" src="" alt="" style="display:none" />
         <div class="analyze-info">
           <div class="analyze-title" id="analyze-title"></div>
           <div class="analyze-summary" id="analyze-summary"></div>
+          <a id="analyze-origin-url" href="" target="_blank" rel="noopener" class="analyze-url-link" style="display:none">🔗 元リンクを開く</a>
         </div>
       </div>
 
@@ -264,7 +286,7 @@
     </div>
   </div>
 
-  <!-- ===== タグ付けモーダル（既存アイテム編集） ===== -->
+  <!-- ===== タグ編集モーダル ===== -->
   <div class="modal-overlay" id="tag-modal" style="display:none">
     <div class="modal-sheet">
       <div class="modal-handle"></div>
@@ -275,6 +297,7 @@
       <div class="modal-thumb-area">
         <img id="modal-thumb" src="" alt="" />
         <div class="modal-item-title" id="modal-item-title"></div>
+        <a id="modal-origin-url" href="" target="_blank" rel="noopener" class="analyze-url-link" style="display:none">🔗 元リンクを開く</a>
       </div>
       <div class="modal-tags">
         <div class="tag-group required">
