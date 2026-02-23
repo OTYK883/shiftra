@@ -3,9 +3,41 @@
 // 削除・名称変更・一括タグ編集・テキスト検索・クリップサムネ改善
 // ============================================================
 
-var gasUrl   = localStorage.getItem('siftra_gas_url') || '';
-var username = localStorage.getItem('siftra_username') || 'ユーザー';
-var apiKey   = localStorage.getItem('siftra_api_key') || '';
+// ============================================================
+// 設定：localStorage + URLハッシュの両方から復元（iOS PWA対策）
+// ============================================================
+function loadSettings() {
+  var hash = {};
+  try {
+    var raw = location.hash.replace('#','');
+    if (raw) {
+      atob(raw).split('|').forEach(function(pair) {
+        var idx = pair.indexOf(':');
+        if (idx > 0) hash[pair.substring(0, idx)] = pair.substring(idx + 1);
+      });
+    }
+  } catch(e) {}
+  return {
+    gasUrl:   hash.g || localStorage.getItem('siftra_gas_url') || '',
+    username: hash.u || localStorage.getItem('siftra_username') || '',
+    apiKey:   localStorage.getItem('siftra_api_key') || '',
+  };
+}
+
+function persistSettings(g, u, k) {
+  localStorage.setItem('siftra_gas_url', g);
+  localStorage.setItem('siftra_username', u);
+  localStorage.setItem('siftra_api_key', k);
+  try {
+    var payload = btoa(['g:' + g, 'u:' + u].join('|'));
+    history.replaceState(null, '', location.pathname + '#' + payload);
+  } catch(e) {}
+}
+
+var _s       = loadSettings();
+var gasUrl   = _s.gasUrl;
+var username = _s.username || 'ユーザー';
+var apiKey   = _s.apiKey;
 
 var allItems      = [];
 var allProjects   = [];
@@ -107,6 +139,17 @@ function setupNav() {
 // 設定
 // ============================================================
 function setupSettings() {
+  // GAS URL未設定なら起動時に自動表示（iOS PWAでlocalStorage消去後の復旧）
+  if (!gasUrl) {
+    setTimeout(function() {
+      document.getElementById('settings-gas-url').value = '';
+      document.getElementById('settings-username').value = username || '';
+      document.getElementById('settings-api-key').value = apiKey || '';
+      document.getElementById('settings-modal').style.display = 'flex';
+      showToast('⚙️ GASのURLを設定してください');
+    }, 800);
+  }
+
   var sBtn = document.getElementById('settings-btn');
   if (sBtn) sBtn.addEventListener('click', function() {
     document.getElementById('settings-gas-url').value = gasUrl;
@@ -121,9 +164,7 @@ function setupSettings() {
     gasUrl   = document.getElementById('settings-gas-url').value.trim();
     username = document.getElementById('settings-username').value.trim();
     apiKey   = document.getElementById('settings-api-key').value.trim();
-    localStorage.setItem('siftra_gas_url', gasUrl);
-    localStorage.setItem('siftra_username', username);
-    localStorage.setItem('siftra_api_key', apiKey);
+    persistSettings(gasUrl, username, apiKey);
     document.getElementById('settings-modal').style.display = 'none';
     showToast('設定を保存しました ✓');
     if (gasUrl) { fetchProjects(); fetchItems({}); }
