@@ -40,7 +40,7 @@
     <section class="tab-content active" id="tab-inbox">
       <div class="section-header">
         <h2>受信ボックス <span class="badge" id="inbox-count">0</span></h2>
-        <p class="section-desc">タグ未設定のアイテム。タップして分類する。</p>
+        <p class="section-desc">受信後、AIが自動分析します。確認して1タップで確定。</p>
       </div>
 
       <div class="share-input-card">
@@ -63,18 +63,29 @@
 
       <div class="upload-card" id="upload-drop-zone">
         <div class="upload-icon">📷</div>
-        <p class="upload-text">写真をアップロード</p>
-        <p class="upload-sub">タップして選択 または ドラッグ＆ドロップ</p>
-        <input type="file" id="file-input" multiple accept="image/*" style="display:none" />
+        <p class="upload-text">ファイルをアップロード</p>
+        <p class="upload-sub">画像・PDF・動画など / ドラッグ＆ドロップ可</p>
+        <input type="file" id="file-input" multiple accept="image/*,application/pdf,video/*" style="display:none" />
         <button class="btn-outline" onclick="document.getElementById('file-input').click()">ファイルを選択</button>
       </div>
 
+      <!-- 未タグ一覧 -->
+      <div class="inbox-list-header">
+        <span class="mono">// 未確定アイテム</span>
+        <button class="btn-ghost sm" id="bulk-tag-btn">まとめてタグ付け</button>
+      </div>
       <div class="untagged-list" id="untagged-list"></div>
     </section>
 
     <!-- ===== TAB: 検索 ===== -->
     <section class="tab-content" id="tab-search">
       <div class="section-header"><h2>アーカイブ検索</h2></div>
+
+      <!-- プロジェクトフィルター -->
+      <div class="project-filter-bar" id="project-filter-bar">
+        <button class="project-chip active" data-project="">すべて</button>
+        <!-- JS生成 -->
+      </div>
 
       <div class="filter-panel">
         <div class="filter-row">
@@ -109,7 +120,23 @@
       <div class="results-grid" id="results-grid"></div>
     </section>
 
-    <!-- ===== TAB: プロンプト生成 ===== -->
+    <!-- ===== TAB: プロジェクト ===== -->
+    <section class="tab-content" id="tab-projects">
+      <div class="section-header">
+        <h2>プロジェクト</h2>
+        <p class="section-desc">案件フォルダ。Driveと自動同期。</p>
+      </div>
+
+      <button class="btn-new-project" id="new-project-btn">
+        <span>＋</span> 新しい案件フォルダを作成
+      </button>
+
+      <div class="project-list" id="project-list">
+        <div class="empty-state">案件フォルダがありません</div>
+      </div>
+    </section>
+
+    <!-- ===== TAB: 生成 ===== -->
     <section class="tab-content" id="tab-prompt">
       <div class="section-header">
         <h2>プロンプト生成</h2>
@@ -153,8 +180,7 @@
       </div>
 
       <button class="btn-generate" id="generate-btn">
-        <span class="generate-icon">✦</span>
-        プロンプトを生成
+        <span class="generate-icon">✦</span>プロンプトを生成
       </button>
 
       <div class="prompt-output-area" id="prompt-output" style="display:none">
@@ -179,26 +205,78 @@
     <button class="nav-item" data-tab="search">
       <span class="nav-icon">🔍</span><span class="nav-label">検索</span>
     </button>
+    <button class="nav-item" data-tab="projects">
+      <span class="nav-icon">📁</span><span class="nav-label">案件</span>
+    </button>
     <button class="nav-item" data-tab="prompt">
       <span class="nav-icon">✦</span><span class="nav-label">生成</span>
     </button>
   </nav>
 
-  <!-- ===== タグ付けモーダル ===== -->
+  <!-- ===== AI分析確認モーダル ===== -->
+  <div class="modal-overlay" id="analyze-modal" style="display:none">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3>AIが分析しました <span class="ai-badge">AI</span></h3>
+        <button class="modal-close" id="analyze-close">✕</button>
+      </div>
+
+      <div class="analyze-preview">
+        <img id="analyze-thumb" src="" alt="" style="display:none" />
+        <div class="analyze-info">
+          <div class="analyze-title" id="analyze-title"></div>
+          <div class="analyze-summary" id="analyze-summary"></div>
+        </div>
+      </div>
+
+      <div class="modal-tags">
+        <div class="tag-group required">
+          <div class="tag-group-label">カテゴリ <span class="required-mark">必須</span></div>
+          <div class="tag-chips" id="analyze-category"></div>
+        </div>
+        <div class="tag-group required">
+          <div class="tag-group-label">用途 <span class="required-mark">必須</span></div>
+          <div class="tag-chips" id="analyze-usage"></div>
+        </div>
+        <div class="tag-group">
+          <div class="tag-group-label">格納先プロジェクト</div>
+          <div class="tag-chips" id="analyze-project"></div>
+        </div>
+        <div class="tag-group">
+          <div class="tag-group-label">エリア＆サイズ感</div>
+          <div class="tag-chips" id="analyze-area"></div>
+        </div>
+        <div class="tag-group">
+          <div class="tag-group-label">トンマナ</div>
+          <div class="tag-chips" id="analyze-tone"></div>
+        </div>
+        <div class="tag-group">
+          <div class="tag-group-label">メモ（任意）</div>
+          <textarea id="analyze-memo" placeholder="メモ・特記事項など" rows="2"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-ghost" id="analyze-skip">後で</button>
+        <button class="btn-accent" id="analyze-save">確定して保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== タグ付けモーダル（既存アイテム編集） ===== -->
   <div class="modal-overlay" id="tag-modal" style="display:none">
     <div class="modal-sheet">
       <div class="modal-handle"></div>
       <div class="modal-header">
-        <h3>タグを設定</h3>
+        <h3>タグを編集</h3>
         <button class="modal-close" id="modal-close">✕</button>
       </div>
       <div class="modal-thumb-area">
         <img id="modal-thumb" src="" alt="" />
         <div class="modal-item-title" id="modal-item-title"></div>
       </div>
-
       <div class="modal-tags">
-        <!-- 必須 -->
         <div class="tag-group required">
           <div class="tag-group-label">カテゴリ <span class="required-mark">必須</span></div>
           <div class="tag-chips" id="modal-category"></div>
@@ -207,7 +285,10 @@
           <div class="tag-group-label">用途 <span class="required-mark">必須</span></div>
           <div class="tag-chips" id="modal-usage"></div>
         </div>
-        <!-- 任意・複数選択 -->
+        <div class="tag-group">
+          <div class="tag-group-label">格納先プロジェクト</div>
+          <div class="tag-chips" id="modal-project"></div>
+        </div>
         <div class="tag-group">
           <div class="tag-group-label">エリア＆サイズ感</div>
           <div class="tag-chips" id="modal-area"></div>
@@ -216,16 +297,46 @@
           <div class="tag-group-label">トンマナ</div>
           <div class="tag-chips" id="modal-tone"></div>
         </div>
-        <!-- メモ -->
         <div class="tag-group">
           <div class="tag-group-label">メモ（任意）</div>
           <textarea id="modal-memo" placeholder="メモ・特記事項など" rows="2"></textarea>
         </div>
       </div>
-
       <div class="modal-footer">
         <button class="btn-ghost" id="modal-skip">後で</button>
         <button class="btn-accent" id="modal-save">保存する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 新規プロジェクトモーダル ===== -->
+  <div class="modal-overlay" id="project-modal" style="display:none">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3>新しい案件フォルダ</h3>
+        <button class="modal-close" id="project-modal-close">✕</button>
+      </div>
+      <div class="settings-body">
+        <div class="settings-group">
+          <label class="settings-label">案件名</label>
+          <input type="text" id="project-name-input" placeholder="例：〇〇社イベント2026" />
+        </div>
+        <div class="settings-group">
+          <label class="settings-label">カラー</label>
+          <div class="color-chips" id="project-color-chips">
+            <button class="color-chip active" data-color="#e8a020" style="background:#e8a020"></button>
+            <button class="color-chip" data-color="#2cd5c4" style="background:#2cd5c4"></button>
+            <button class="color-chip" data-color="#e85050" style="background:#e85050"></button>
+            <button class="color-chip" data-color="#50c878" style="background:#50c878"></button>
+            <button class="color-chip" data-color="#8b5cf6" style="background:#8b5cf6"></button>
+            <button class="color-chip" data-color="#e8eaf0" style="background:#e8eaf0"></button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" id="project-modal-cancel">キャンセル</button>
+        <button class="btn-accent" id="project-modal-save">作成する</button>
       </div>
     </div>
   </div>
@@ -248,9 +359,9 @@
           <input type="text" id="settings-username" placeholder="オオタユウキ" />
         </div>
         <div class="settings-group">
-          <label class="settings-label">Anthropic APIキー（画像認識用）</label>
+          <label class="settings-label">Anthropic APIキー（自動分析・画像認識用）</label>
           <input type="password" id="settings-api-key" placeholder="sk-ant-..." />
-          <span class="settings-hint">プロンプト生成タブの画像認識に使用。未入力はタグベース生成になります。</span>
+          <span class="settings-hint">受信時の自動タグ推定・プロンプト生成に使用。未入力は手動タグ付けになります。</span>
         </div>
       </div>
       <div class="modal-footer">

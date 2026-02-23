@@ -862,3 +862,133 @@ html, body {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
+
+/* ============================================================
+   PROJECT TAB
+   ============================================================ */
+.project-filter-bar {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.project-chip {
+  background: var(--bg-3);
+  border: 1px solid var(--border-2);
+  border-radius: 20px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.project-chip.active {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-new-project {
+  width: 100%;
+  background: none;
+  border: 1px dashed var(--border-2);
+  border-radius: var(--radius);
+  color: var(--text-2);
+  font-family: var(--font-main);
+  font-size: 0.85rem;
+  padding: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-bottom: 16px;
+  transition: all 0.2s;
+}
+.btn-new-project:hover { border-color: var(--accent); color: var(--accent); }
+
+.project-list { display: flex; flex-direction: column; gap: 10px; }
+.project-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex; align-items: center; gap: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.project-card:hover { border-color: var(--border-2); }
+.project-color-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.project-info { flex: 1; }
+.project-name { font-size: 0.9rem; font-weight: 600; margin-bottom: 3px; }
+.project-meta { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-3); }
+.project-count {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-3);
+  background: var(--bg-3);
+  padding: 3px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-2);
+}
+
+/* ============================================================
+   AI ANALYZE MODAL
+   ============================================================ */
+.ai-badge {
+  background: linear-gradient(135deg, var(--accent), var(--teal));
+  color: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+.analyze-preview {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+#analyze-thumb {
+  width: 80px; height: 80px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.analyze-info { flex: 1; }
+.analyze-title {
+  font-size: 0.85rem; font-weight: 600;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+.analyze-summary {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+
+/* ============================================================
+   COLOR CHIPS
+   ============================================================ */
+.color-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.color-chip {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.color-chip.active { border-color: var(--text); transform: scale(1.2); }
+
+/* ============================================================
+   INBOX LIST HEADER
+   ============================================================ */
+.inbox-list-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
